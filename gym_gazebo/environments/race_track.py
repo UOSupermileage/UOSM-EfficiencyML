@@ -75,7 +75,7 @@ class RaceTrackEnv(gym.env):
                 # Choose a throttle ranging from 0 to 1000
                 "throttle": spaces.Box(low=0, high=1000, shape=(1, 1), dtype=np.uint16),
                 # Choose a steering direction ranging from 0 to 2000
-                "steering": spaces.Box(low=0, high=2000, shape=(1, 1), dtype=np.uint16)
+                "steering": spaces.Box(low=-1000, high=1000, shape=(1, 1), dtype=np.int16)
             }
         )
 
@@ -93,6 +93,8 @@ class RaceTrackEnv(gym.env):
         self._windResistance = np.int16(0)
         self._throttle = np.uint16(0)
 
+        # TODO: Call Reset ROS service
+
         observation = self._get_obs()
         info = self._get_info()
 
@@ -107,6 +109,8 @@ class RaceTrackEnv(gym.env):
         targetSteering = action["steering"][0][0]
 
         terminated = np.array_equal(self._checkpoints[0], [-1, -1, -1])
+
+        # TODO: Add Error Margin
         reachedCheckpoint = np.array_equal(self._location, self._checkpoints[0])
 
         reward = 1 if terminated else 0
@@ -114,6 +118,8 @@ class RaceTrackEnv(gym.env):
 
         # Need to play with energy consumption punishment
         reward -= (self._energyConsumption / 500000)
+
+        # TODO: Call ROS Step
 
         observation = self._get_obs()
         info = self._get_info()
