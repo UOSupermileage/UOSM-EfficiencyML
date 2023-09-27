@@ -33,6 +33,9 @@ import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
 from gymnasium.core import ObsType
+from gazebo_ai.gazebo_ai.world_control import WorldControlClient
+
+import rclpy
 
 
 class RaceTrackEnv(gym.env):
@@ -79,6 +82,16 @@ class RaceTrackEnv(gym.env):
             }
         )
 
+        rclpy.init()
+
+        self.client = WorldControlClient()
+        self.client.get_logger().info('Constructing World Control Client in AI Gymnasium.')
+    
+    def __del__(self):
+        self.client.destroy_node()
+        rclpy.shutdown()    
+
+
     def reset(self, seed=None, options=None):
         """Called to reset the environment"""
 
@@ -93,7 +106,8 @@ class RaceTrackEnv(gym.env):
         self._windResistance = np.int16(0)
         self._throttle = np.uint16(0)
 
-        # TODO: Call Reset ROS service
+        # Call Reset ROS service
+        self.client.reset()
 
         observation = self._get_obs()
         info = self._get_info()
@@ -119,7 +133,8 @@ class RaceTrackEnv(gym.env):
         # Need to play with energy consumption punishment
         reward -= (self._energyConsumption / 500000)
 
-        # TODO: Call ROS Step
+        # Call ROS Step
+        self.client.step(100)
 
         observation = self._get_obs()
         info = self._get_info()
