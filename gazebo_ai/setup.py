@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'ai_service'
+package_name = 'gazebo_ai'
 
 setup(
     name=package_name,
@@ -15,12 +15,12 @@ setup(
     zip_safe=True,
     maintainer='jeremy',
     maintainer_email='jeremymcote@gmail.com',
-    description='TODO: Package description',
-    license='TODO: License declaration',
+    description='A Python client for interacting with Gazebo World Control',
+    license='MIT',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'world_control = ai_service.world_control:main'
+            'world_control = gazebo_ai.world_control:main'
         ],
     },
 )
