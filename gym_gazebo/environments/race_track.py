@@ -33,12 +33,12 @@ import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
 from gymnasium.core import ObsType
-from gazebo_ai.gazebo_ai.world_control import WorldControlClient
+from gazebo_ai.world_control import WorldControlClient
 
 import rclpy
 
 
-class RaceTrackEnv(gym.env):
+class RaceTrackEnv(gym.Env):
     """Environment for training ai on a gazebo race track"""
     startingPosition: Tuple[np.int32, np.int32, np.int32]
     nCheckpointsLookAhead: int
@@ -51,7 +51,7 @@ class RaceTrackEnv(gym.env):
     _windResistance: np.int16
     _throttle: np.uint16
 
-    def __init__(self, startingPosition: Tuple[np.int32, np.int32, np.int32], nCheckpointsLookAhead: int = 3):
+    def __init__(self, controlSvc: str, startingPosition: Tuple[np.int32, np.int32, np.int32], nCheckpointsLookAhead: int = 3):
         """Initialize the environment"""
         self.startingPosition = startingPosition
         self.nCheckpointsLookAhead = nCheckpointsLookAhead
@@ -84,7 +84,7 @@ class RaceTrackEnv(gym.env):
 
         rclpy.init()
 
-        self.client = WorldControlClient()
+        self.client = WorldControlClient(controlSvc)
         self.client.get_logger().info('Constructing World Control Client in AI Gymnasium.')
     
     def __del__(self):
@@ -108,6 +108,7 @@ class RaceTrackEnv(gym.env):
 
         # Call Reset ROS service
         self.client.reset()
+        self.client.get_logger().info('Called World Control Client Reset in AI Gymnasium')
 
         observation = self._get_obs()
         info = self._get_info()
@@ -158,3 +159,13 @@ class RaceTrackEnv(gym.env):
 
     def _get_info(self):
         return {}
+
+if __name__ == '__main__':
+    print("Constructing Sample Env")
+    env = RaceTrackEnv('/world/buoyancy/control', (0,0,0))
+    print("Reseting Env")
+    env.reset()
+
+    del env
+
+    print("Deleted Env")

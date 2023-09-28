@@ -6,14 +6,9 @@ from rclpy.node import Node
 SERVICE_PARAMETER = 'world_control_target_service'
 
 class WorldControlClient(Node):
-    def __init__(self):
+    def __init__(self, svc: str):
         super().__init__('world_control')
         
-        # self.declare_parameter(SERVICE_PARAMETER)
-        # svc = self.get_parameter(SERVICE_PARAMETER).get_parameter_value().string_value
-
-        svc = '/world/buoyancy/control'
-
         self.cli = self.create_client(ControlWorld, svc)
         while not self.cli.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('service not available, waiting again...')
@@ -42,7 +37,7 @@ class WorldControlClient(Node):
 def main():
     rclpy.init()
 
-    minimal_client = WorldControlClient()
+    minimal_client = WorldControlClient('/world/buoyancy/control')
     
     minimal_client.get_logger().info('Defaulting to reset command.')
     
