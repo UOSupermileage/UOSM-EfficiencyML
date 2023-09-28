@@ -34,27 +34,74 @@ import numpy as np
 from gymnasium import spaces
 from gymnasium.core import ObsType
 from gazebo_ai.world_control import WorldControlClient
+from rclpy.node import Node
+
+from std_msgs.msg import String
 
 import rclpy
 
+class Subscriber(Node):
+    def __init__(self, topic: str, topicType: Any, topicConverter: function, defaultValue: Any):
+        """Create a subscriber
+
+        Args:
+            topic (str): the ROS topic to subscribe to
+            topicType (Any): the ROS type of the topic
+            topicConverter (function): the conversion function for the ROS type to the value stored in the subscriber
+        """
+        super().__init__('subscriber_' + topic)
+        self.topicConverter = topicConverter
+        self.defaultValue = defaultValue
+        self.value = defaultValue
+        self.subscription = self.create_subscription(topicType, topic, self.callback, 10)
+
+    def callback(self, msg):
+        self.get_logger().info('Subscriber received message.')
+        self.value = self.topicConverter(msg)
+
+    def getValue(self):
+        return self.value
+    
+    def reset(self):
+        self.value = self.defaultValue
+    
+def locationListConverter(msg):
+    return msg
+
+def locationConverter(msg):
+    return msg
+
+def speedConverter(msg):
+    return msg
+
+def accelerationConverter(msg):
+    return msg
+
+def energyConsumptionConverter(msg):
+    return msg 
+
+def windResistanceConverter(msg):
+    return msg
+
+def throttleConverter(msg):
+    return msg
+
+def directionConverter(msg):
+    return msg
 
 class RaceTrackEnv(gym.Env):
     """Environment for training ai on a gazebo race track"""
-    startingPosition: Tuple[np.int32, np.int32, np.int32]
-    nCheckpointsLookAhead: int
 
-    _checkpoints: np.array
-    _location: np.array
-    _speed: np.uint16
-    _acceleration: np.int16
-    _energyConsumption: np.uint32
-    _windResistance: np.int16
-    _throttle: np.uint16
-
-    def __init__(self, controlSvc: str, startingPosition: Tuple[np.int32, np.int32, np.int32], nCheckpointsLookAhead: int = 3):
+    def __init__(self, controlSvc: str, checkpointTopic: str, locationTopic: str, speedTopic: str, accelerationTopic: str, energyConsumptionTopic: str, windResistanceTopic: str, throttleTopic: str, directionTopic: str, nCheckpointsLookAhead: int):
         """Initialize the environment"""
-        self.startingPosition = startingPosition
-        self.nCheckpointsLookAhead = nCheckpointsLookAhead
+        self.checkpointSubscriber        = Subscriber(checkpointTopic, '', locationListConverter, '')
+        self.locationSubscriber          = Subscriber(locationTopic, '', locationConverter, '')
+        self.speedSubscriber             = Subscriber(speedTopic, '', locationConverter, 0)
+        self.accelerationSubscriber      = Subscriber(accelerationTopic, '', accelerationConverter, 0)
+        self.energyConsumptionSubscriber = Subscriber(energyConsumptionTopic, '', energyConsumptionConverter, 0)
+        self.windResistanceSubscriber    = Subscriber(windResistanceTopic, '', windResistanceConverter, 0)
+        self.throttleSubscriber          = Subscriber(throttleTopic, '', throttleConverter, 0)
+        self.directionSubscriber         = Subscriber(directionTopic, '', directionConverter, 0)
 
         # Define all the inputs for the model
         self.observation_space = spaces.Dict(
@@ -68,7 +115,8 @@ class RaceTrackEnv(gym.Env):
                 "acceleration": spaces.Box(low=-32768, high=32767, shape=(1, 1), dtype=np.int16),
                 "energyConsumption": spaces.Box(low=0, high=4294967295, shape=(1, 1), dtype=np.uint32),
                 "windResistance": spaces.Box(low=-32768, high=32767, shape=(1, 1), dtype=np.int16),
-                "throttle": spaces.Box(low=0, high=1000, shape=(1, 1), dtype=np.uint16)
+                "throttle": spaces.Box(low=0, high=1000, shape=(1, 1), dtype=np.uint16),
+                "direction": spaces.Box(low=-2147483648, high=2147483647, shape=(1, 2), dtype=np.int32) 
             }
         )
 
@@ -81,7 +129,8 @@ class RaceTrackEnv(gym.Env):
                 "steering": spaces.Box(low=-1000, high=1000, shape=(1, 1), dtype=np.int16)
             }
         )
-
+ 
+        # Start ROS integration
         rclpy.init()
 
         self.client = WorldControlClient(controlSvc)
@@ -97,14 +146,6 @@ class RaceTrackEnv(gym.Env):
 
         # Propagate passed seed
         super().reset(seed=seed)
-
-        self._location = self.startingPosition
-        self._checkpoints = (np.array([0, 0, 0]), np.array([0, 0, 0]), np.array([0, 0, 0]))
-        self._speed = np.uint16(0)
-        self._acceleration = np.int16(0)
-        self._energyConsumption = np.uint32(0)
-        self._windResistance = np.int16(0)
-        self._throttle = np.uint16(0)
 
         # Call Reset ROS service
         self.client.reset()
